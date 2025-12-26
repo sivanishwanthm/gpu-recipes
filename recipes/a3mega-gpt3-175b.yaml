@@ -1,0 +1,36 @@
+# recipes/a3mega-gpt3-175b.yaml
+# Configuration for the a3mega GPT-3 175B Nemo pretraining recipe.
+# This file is used by the run_recipe.sh script.
+
+recipe_name: "a3mega-gpt3-175b"
+
+# --- GCP Configuration ---
+# These values should be configured for the target environment.
+gcp:
+  project_id: "your-gcp-project-id"
+  cluster_name: "a3mega-cluster"
+  cluster_region: "us-central1"
+  gcs_bucket: "your-gcs-bucket-name"
+
+# --- Workload Configuration ---
+# Paths are relative to the repository root.
+workload:
+  # This is the Kueue local queue name.
+  queue_name: "a3-mega"
+  # The full path to the container image in Artifact Registry.
+  image: "us-central1-docker.pkg.dev/your-gcp-project-id/nemo-images/nemo_workload:24.07"
+  # Path to the workload launcher script.
+  launcher_path: "src/launchers/nemo-10-launcher.sh"
+  # Path to the NeMo configuration file.
+  config_path: "src/frameworks/a3mega/nemo-configs/gpt3-175b-256gpus-fp8.yaml"
+
+# --- Validation Configuration ---
+validation:
+  # Timeout in seconds for the validation script to wait for resources to be created.
+  timeout: 300
+
+# --- Recipe and Helm Chart Information ---
+# The root directory of the recipe being validated.
+recipe_root: "training/a3mega/gpt3-175b/nemo-pretraining-gke"
+# The path to the Helm chart used for deployment.
+helm_chart_path: "src/helm-charts/a3mega/jobset"

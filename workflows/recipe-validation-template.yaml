@@ -1,0 +1,86 @@
+# workflows/recipe-validation-template.yaml
+# Argo WorkflowTemplate for running AI Hypercomputer recipe functional validation.
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  # The name of the WorkflowTemplate. This is referenced by Workflows that use this template.
+  name: recipe-validation-template
+spec:
+  # --- Entrypoint and Arguments ---
+  # The `entrypoint` specifies the first template to execute in the workflow.
+  entrypoint: run-recipe-validation
+
+  # `arguments` defines the parameters that can be passed to this WorkflowTemplate.
+  arguments:
+    spec:
+      # `recipe_yaml_path` is the path to the recipe config file within the git repository.
+      recipe_yaml_path: ""
+
+  # --- TTL Strategy ---
+  # The `ttlStrategy` automatically cleans up completed workflows to prevent clutter.
+  ttlStrategy:
+    # Workflows that complete successfully will be deleted after 1 hour (3600 seconds).
+    secondsAfterSuccess: 3600
+    # Workflows that fail will be deleted after 6 hours (21600 seconds) to allow for debugging.
+    secondsAfterFailure: 21600
+
+  # --- Templates ---
+  # This section defines the reusable components (steps) of the workflow.
+  templates:
+    - name: run-recipe-validation
+      # --- Retry Strategy ---
+      # The `retryStrategy` defines how to handle failures for this template.
+      retryStrategy:
+        limit: 2
+        # The backoff strategy determines the wait time between retries.
+        backoff:
+          # The duration increases exponentially with each retry.
+          duration: "30s"
+          factor: "2"
+          maxDuration: "5m"
+
+      # --- Inputs ---
+      # This template takes the `recipe_yaml_path` as an input parameter.
+      inputs:
+        parameters:
+          - name: recipe_yaml_path
+            value: "{{workflow.arguments.spec.recipe_yaml_path}}"
+
+      # --- Source ---
+      # The `source` block defines where the code or artifacts for the step are located.
+      source:
+        # `git` specifies that the source is a git repository.
+        git:
+          repoURL: "https://github.com/ai-hypercomputer/gpu-recipes.git"
+          # `main` is the default revision, but it's good practice to be explicit.
+          revision: "main"
+
+      # --- Script Step ---
+      # The `script` template allows for running a shell script within a container.
+      script:
+        # The base image for the container where the script will run.
+        # This image must be pre-built and available in a registry accessible by the cluster.
+        # It should contain all necessary tools (gcloud, kubectl, helm, yq).
+        image: gcr.io/your-gcp-project-id/recipe-runner:latest # IMPORTANT: Replace with your runner image
+
+        # The shell script to be executed.
+        source: |
+          #!/bin/bash
+          # The git repository is checked out to /src by default.
+          cd /src
+
+          # Execute the validation script, passing the path to the recipe file.
+          # The run_recipe.sh script is located in the runner/ directory of the repository.
+          ./runner/run_recipe.sh "{{inputs.parameters.recipe_yaml_path}}"
+
+        # The command to execute the script.
+        command: ["bash"]
+
+        # --- Resource Requests ---
+        # Specify the minimum resources required for this step to run.
+        # This helps in scheduling the pod on a node with sufficient resources.
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "0.5"
