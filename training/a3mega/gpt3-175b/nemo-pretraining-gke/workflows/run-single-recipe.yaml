@@ -18,4 +18,4 @@ spec:
     spec:
       # The `recipe_yaml_path` parameter is the path to the recipe's YAML file
       # within the git repository.
-      recipe_yaml_path: "recipes/a3mega-gpt3-175b.yaml"
+      recipe_yaml_path: "training/a3mega/gpt3-175b/nemo-pretraining-gke/recipes/a3mega-gpt3-175b.yaml"

@@ -1,5 +1,6 @@
 # workflows/recipe-validation-template.yaml
 # Argo WorkflowTemplate for running AI Hypercomputer recipe functional validation.
+# This template is designed to be reusable for any recipe that follows the expected directory structure.
 
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
@@ -33,53 +34,54 @@ spec:
       # The `retryStrategy` defines how to handle failures for this template.
       retryStrategy:
         limit: 2
-        # The backoff strategy determines the wait time between retries.
         backoff:
-          # The duration increases exponentially with each retry.
           duration: "30s"
           factor: "2"
           maxDuration: "5m"
 
       # --- Inputs ---
-      # This template takes the `recipe_yaml_path` as an input parameter.
       inputs:
         parameters:
           - name: recipe_yaml_path
             value: "{{workflow.arguments.spec.recipe_yaml_path}}"
 
       # --- Source ---
-      # The `source` block defines where the code or artifacts for the step are located.
+      # The `source` block clones the git repository into the container.
       source:
-        # `git` specifies that the source is a git repository.
         git:
           repoURL: "https://github.com/ai-hypercomputer/gpu-recipes.git"
-          # `main` is the default revision, but it's good practice to be explicit.
           revision: "main"
 
       # --- Script Step ---
-      # The `script` template allows for running a shell script within a container.
       script:
         # The base image for the container where the script will run.
-        # This image must be pre-built and available in a registry accessible by the cluster.
-        # It should contain all necessary tools (gcloud, kubectl, helm, yq).
         image: gcr.io/your-gcp-project-id/recipe-runner:latest # IMPORTANT: Replace with your runner image
 
-        # The shell script to be executed.
+        # This script dynamically constructs the path to the runner script, making the template reusable.
         source: |
           #!/bin/bash
+          set -e
           # The git repository is checked out to /src by default.
           cd /src
 
-          # Execute the validation script, passing the path to the recipe file.
-          # The run_recipe.sh script is located in the runner/ directory of the repository.
-          ./runner/run_recipe.sh "{{inputs.parameters.recipe_yaml_path}}"
+          # Get the path to the recipe's YAML file from the input parameter.
+          RECIPE_YAML_PATH="{{inputs.parameters.recipe_yaml_path}}"
 
-        # The command to execute the script.
+          # Dynamically determine the root directory of the recipe.
+          # This is done by getting the directory of the YAML file, and then going up one level.
+          # e.g., from "path/to/recipe/recipes/config.yaml" to "path/to/recipe"
+          RECIPE_DIR=$(dirname "${RECIPE_YAML_PATH}")/..
+
+          # Construct the path to the runner script.
+          RUNNER_SCRIPT_PATH="${RECIPE_DIR}/runner/run_recipe.sh"
+
+          echo "Dynamically determined runner script path: ${RUNNER_SCRIPT_PATH}"
+
+          # Execute the validation script, passing the path to the recipe file.
+          bash "${RUNNER_SCRIPT_PATH}" "${RECIPE_YAML_PATH}"
+
         command: ["bash"]
 
-        # --- Resource Requests ---
-        # Specify the minimum resources required for this step to run.
-        # This helps in scheduling the pod on a node with sufficient resources.
         resources:
           requests:
             memory: "1Gi"
