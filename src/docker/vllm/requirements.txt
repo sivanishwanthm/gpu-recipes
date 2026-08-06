@@ -221,9 +221,9 @@ dill==0.3.8 \
     #   -r requirements.in
     #   datasets
     #   multiprocess
-filelock==3.18.0 \
-    --hash=sha256:adbc88eabb99d2fec8c9c1b229b171f18afa655400173ddc653d5d01501fb9f2 \
-    --hash=sha256:c401f4f8377c4464e6db25fff06205fd89bdd83b65eb0488ed1b160f780e21de
+filelock==3.20.3 \
+    --hash=sha256:18c57ee915c7ec61cff0ecf7f0f869936c7c30191bb0cf406f1341778d0834e1 \
+    --hash=sha256:4b0dda527ee31078689fc205ec4f1c1bf7d56cf88b6dc9426c4f230e46c2dce1
     # via
     #   -r requirements.in
     #   datasets
@@ -978,9 +978,9 @@ tqdm==4.67.1 \
     #   datasets
     #   huggingface-hub
     #   transformers
-transformers==4.51.0 \
-    --hash=sha256:2d302563ff6c2cc2d0e88ef352cf059f9a21ce18102fd43662bb1246f70b8a84 \
-    --hash=sha256:2e6baa476735ab8adccbaee6961525a0d1ce8c21d49293af30ef5ee4b082f64d
+transformers==4.53.0 \
+    --hash=sha256:7d8039ff032c01a2d7f8a8fe0066620367003275f023815a966e62203f9f5dd7 \
+    --hash=sha256:f89520011b4a73066fdc7aabfa158317c3934a22e3cd652d7ffbc512c4063841
     # via -r requirements.in
 typing-extensions==4.13.1 \
     --hash=sha256:4b6cf02909eb5495cfbc3f6e8fd49217e6cc7944e145cdda8caa3734777f9e69 \

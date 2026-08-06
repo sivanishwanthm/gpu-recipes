@@ -129,7 +129,7 @@ export CLUSTER_REGION=<REGION_of_your_cluster>
 export CLUSTER_NAME=<YOUR_GKE_CLUSTER_NAME>
 export KUEUE_NAME=<YOUR_KUEUE_NAME>
 export GCS_BUCKET=<your-gcs-bucket-for-logs>
-export TRTLLM_VERSION=1.2.0rc2
+export TRTLLM_VERSION=1.3.0rc5
 
 # Set the project for gcloud commands
 gcloud config set project $PROJECT_ID
@@ -199,16 +199,26 @@ kubectl create secret generic hf-secret \
 
 This recipe supports the following models. You can easily swap between them by changing the environment variables in the next step.
 
+Running TRTLLM inference benchmarking on these models are only tested and validated on A4X GKE nodes with certain combination of TP, PP, EP, number of GPU chips, input & output sequence length, precision, etc.
+
+Example model configuration YAML files included in this repo only show a certain combination of parallelism hyperparameters and configs for benchmarking purposes. Input and output length in `gpu-recipes/inference/a4x/single-host-serving/tensorrt-llm/values.yaml` need to be adjusted according to the model and its configs.
+
 | Model Name | Hugging Face ID | Configuration File | Release Name Suffix |
 | :--- | :--- | :--- | :--- |
-| **DeepSeek-R1 671B** | `nvidia/DeepSeek-R1-NVFP4-v2` | `deepseek-r1-nvfp4.yaml` | `deepseek-r1-model` |
+| **DeepSeek R1 671B** | `nvidia/DeepSeek-R1-NVFP4-v2` | `deepseek-r1-nvfp4.yaml` | `deepseek-r1` |
+| **Llama 3.1 405B (FP8)** | `meta-llama/Llama-3.1-405B-Instruct-FP8` | `llama-3.1-405b.yaml` | `llama-3-1-405b` |
+| **Llama 3.1 405B (NVFP4)** | `nvidia/Llama-3.1-405B-Instruct-NVFP4` | `llama-3.1-405b.yaml` | `llama-3-1-405b` |
 | **Llama 3.1 70B** | `meta-llama/Llama-3.1-70B-Instruct` | `llama-3.1-70b.yaml` | `llama-3-1-70b` |
 | **Llama 3.1 8B** | `meta-llama/Llama-3.1-8B-Instruct` | `llama-3.1-8b.yaml` | `llama-3-1-8b` |
+| **Qwen 2.5 VL 7B (FP8)** |  `Qwen/Qwen2.5-VL-7B-Instruct` | `qwen2-5-vl-7b-fp8.yaml` | `qwen2-5-vl-7b` |
+| **Qwen 2.5 VL 7B (NVFP4)** |  `nvidia/Qwen2.5-VL-7B-Instruct-NVFP4` | `qwen2-5-vl-7b-nvfp4.yaml` | `qwen2-5-vl-7b` |
+| **Qwen 3 235B A22B (FP8)** |  `Qwen/Qwen3-235B-A22B-FP8` | `qwen3-235b-a22b-fp8.yaml` | `qwen3-235b-a22b` |
+| **Qwen 3 235B A22B (NVFP4)** |  `nvidia/Qwen3-235B-A22B-NVFP4` | `qwen3-235b-a22b-nvfp4.yaml` | `qwen3-235b-a22b` |
 | **Qwen 3 32B** | `Qwen/Qwen3-32B` | `qwen3-32b.yaml` | `qwen3-32b` |
 | **Qwen 3 4B** | `Qwen/Qwen3-4B` | `qwen3-4b.yaml` | `qwen3-4b` |
 
 > [!TIP]
-> **DeepSeek-R1 671B** uses Nvidia's pre-quantized FP4 checkpoint. For more information, see the [Hugging Face model card](https://huggingface.co/nvidia/DeepSeek-R1-NVFP4-v2).
+> **DeepSeek R1 671B** uses Nvidia's pre-quantized FP4 checkpoint. For more information, see the [Hugging Face model card](https://huggingface.co/nvidia/DeepSeek-R1-NVFP4-v2).
 
 > [!TIP]
 > You can use the [NVIDIA Model Optimizer](https://github.com/NVIDIA/Model-Optimizer/tree/main/examples/llm_ptq) to quantize these models to FP8 or NVFP4 for improved performance.
@@ -223,10 +233,10 @@ The recipe uses [`trtllm-bench`](https://github.com/NVIDIA/TensorRT-LLM/blob/mai
 1.  **Configure model-specific variables.** Choose a model from the [table above](#supported-models) and set the variables:
 
     ```bash
-    # Example for Llama 3.1 70B
-    export HF_MODEL_ID="meta-llama/Llama-3.1-70B-Instruct"
-    export CONFIG_FILE="llama-3.1-70b.yaml"
-    export RELEASE_NAME="$USER-serving-llama-3-1-70b"
+    # Example for DeepSeek R1 NVFP4
+    export HF_MODEL_ID="nvidia/DeepSeek-R1-NVFP4-v2"
+    export CONFIG_FILE="deepseek-r1-nvfp4.yaml"
+    export RELEASE_NAME="$USER-serving-deepseek-r1"
     ```
 
 2.  **Install the helm chart:**
@@ -258,7 +268,7 @@ The recipe uses [`trtllm-bench`](https://github.com/NVIDIA/TensorRT-LLM/blob/mai
 
 [Back to Top](#table-of-contents)
 
-After the model is deployed via Helm as described in the sections [above](#run-the-recipe), use the following steps to monitor the deployment and interact with the model. Replace `<deployment-name>` and `<service-name>` with the appropriate names from the model-specific deployment instructions (e.g., `$USER-serving-deepseek-r1-model` and `$USER-serving-deepseek-r1-model-svc`).
+After the model is deployed via Helm as described in the sections [above](#run-the-recipe), use the following steps to monitor the deployment and interact with the model. Replace `<deployment-name>` and `<service-name>` with the appropriate names from the model-specific deployment instructions (e.g., `$USER-serving-deepseek-r1` and `$USER-serving-deepseek-r1-svc`).
 
 
 <a name="check-status"></a>
@@ -267,8 +277,8 @@ After the model is deployed via Helm as described in the sections [above](#run-t
 Check the status of your deployment. Replace the name if you deployed a different model.
 
 ```bash
-# Example for DeepSeek-R1 671B
-kubectl get deployment/$USER-serving-deepseek-r1-model
+# Example for DeepSeek R1 671B
+kubectl get deployment/$USER-serving-deepseek-r1
 ```
 
 Wait until the `READY` column shows `1/1`. If it shows `0/1`, the pod is still starting up.
@@ -282,7 +292,7 @@ Wait until the `READY` column shows `1/1`. If it shows `0/1`, the pod is still s
 To see the logs from the TRTLLM server (useful for debugging), use the `-f` flag to follow the log stream:
 
 ```bash
-kubectl logs -f deployment/$USER-serving-deepseek-r1-model
+kubectl logs -f deployment/$USER-serving-deepseek-r1
 ```
 
 You should see logs indicating preparing the model, and then running the throughput benchmark test, similar to this:
