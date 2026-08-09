@@ -1,0 +1,21 @@
+# workflows/run-single-recipe.yaml
+# This Argo Workflow submits a single recipe validation run.
+# It uses the `recipe-validation-template` and passes the path to the recipe configuration file.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  # generateName provides a unique name for each workflow run, making them easy to track.
+  generateName: a3mega-gpt3-175b-validation-
+spec:
+  # workflowTemplateRef specifies the WorkflowTemplate to use for this workflow.
+  workflowTemplateRef:
+    name: recipe-validation-template
+
+  # --- Arguments ---
+  # These arguments are passed to the WorkflowTemplate.
+  arguments:
+    spec:
+      # The `recipe_yaml_path` parameter is the path to the recipe's YAML file
+      # within the git repository.
+      recipe_yaml_path: "training/a3mega/gpt3-175b/nemo-pretraining-gke/recipes/a3mega-gpt3-175b.yaml"

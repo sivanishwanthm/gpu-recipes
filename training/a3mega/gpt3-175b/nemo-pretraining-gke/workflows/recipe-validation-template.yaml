@@ -1,0 +1,88 @@
+# workflows/recipe-validation-template.yaml
+# Argo WorkflowTemplate for running AI Hypercomputer recipe functional validation.
+# This template is designed to be reusable for any recipe that follows the expected directory structure.
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  # The name of the WorkflowTemplate. This is referenced by Workflows that use this template.
+  name: recipe-validation-template
+spec:
+  # --- Entrypoint and Arguments ---
+  # The `entrypoint` specifies the first template to execute in the workflow.
+  entrypoint: run-recipe-validation
+
+  # `arguments` defines the parameters that can be passed to this WorkflowTemplate.
+  arguments:
+    spec:
+      # `recipe_yaml_path` is the path to the recipe config file within the git repository.
+      recipe_yaml_path: ""
+
+  # --- TTL Strategy ---
+  # The `ttlStrategy` automatically cleans up completed workflows to prevent clutter.
+  ttlStrategy:
+    # Workflows that complete successfully will be deleted after 1 hour (3600 seconds).
+    secondsAfterSuccess: 3600
+    # Workflows that fail will be deleted after 6 hours (21600 seconds) to allow for debugging.
+    secondsAfterFailure: 21600
+
+  # --- Templates ---
+  # This section defines the reusable components (steps) of the workflow.
+  templates:
+    - name: run-recipe-validation
+      # --- Retry Strategy ---
+      # The `retryStrategy` defines how to handle failures for this template.
+      retryStrategy:
+        limit: 2
+        backoff:
+          duration: "30s"
+          factor: "2"
+          maxDuration: "5m"
+
+      # --- Inputs ---
+      inputs:
+        parameters:
+          - name: recipe_yaml_path
+            value: "{{workflow.arguments.spec.recipe_yaml_path}}"
+
+      # --- Source ---
+      # The `source` block clones the git repository into the container.
+      source:
+        git:
+          repoURL: "https://github.com/ai-hypercomputer/gpu-recipes.git"
+          revision: "main"
+
+      # --- Script Step ---
+      script:
+        # The base image for the container where the script will run.
+        image: gcr.io/your-gcp-project-id/recipe-runner:latest # IMPORTANT: Replace with your runner image
+
+        # This script dynamically constructs the path to the runner script, making the template reusable.
+        source: |
+          #!/bin/bash
+          set -e
+          # The git repository is checked out to /src by default.
+          cd /src
+
+          # Get the path to the recipe's YAML file from the input parameter.
+          RECIPE_YAML_PATH="{{inputs.parameters.recipe_yaml_path}}"
+
+          # Dynamically determine the root directory of the recipe.
+          # This is done by getting the directory of the YAML file, and then going up one level.
+          # e.g., from "path/to/recipe/recipes/config.yaml" to "path/to/recipe"
+          RECIPE_DIR=$(dirname "${RECIPE_YAML_PATH}")/..
+
+          # Construct the path to the runner script.
+          RUNNER_SCRIPT_PATH="${RECIPE_DIR}/runner/run_recipe.sh"
+
+          echo "Dynamically determined runner script path: ${RUNNER_SCRIPT_PATH}"
+
+          # Execute the validation script, passing the path to the recipe file.
+          bash "${RUNNER_SCRIPT_PATH}" "${RECIPE_YAML_PATH}"
+
+        command: ["bash"]
+
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "0.5"
